@@ -3,8 +3,8 @@
   "fetched_at": "2026-11-16T04:38:26.662385+00:00",
   "index_version": "5.0.1",
   "catalog_entries": 742,
-  "developers_shown": 17,
-  "minimum_score_inclusive": 20.1068756031705,
+  "developers_shown": 14,
+  "minimum_score_inclusive": 28.5750026655353,
   "score_filter": "at_least_reference_model",
   "score_status_filter": "any_finite_numeric",
   "public_api_required": true,
@@ -14,20 +14,25 @@
   "layout": {
     "minimum_flag_value_gap_points": 7.0,
     "minimum_label_footer_gap_points": 9.95,
-    "open_weight_bars_hatched": 9,
-    "input_icons_shown": 38,
+    "open_weight_bars_hatched": 7,
+    "input_icons_shown": 32,
     "input_icons_above_short_bars": 0,
     "minimum_input_icon_gap_points": 3.92,
     "minimum_input_icon_bar_clearance_points": 9.0
   },
   "reference_model": {
-    "slug": "qwen3-8-27b",
-    "name": "Qwen3.8 27B (Xhigh)",
-    "score": 20.1068756031705,
-    "effort": "xhigh",
-    "url": "https://artificialanalysis.ai/models/qwen3-8-27b",
-    "release_slug": "qwen3-8-27b"
+    "slug": "qwen3-8-flash-next",
+    "name": "Qwen3.8-Flash-Next",
+    "score": 28.5750026655353,
+    "effort": null,
+    "url": "https://artificialanalysis.ai/models/qwen3-8-flash-next",
+    "release_slug": "qwen3-8-flash-next"
   },
+  "excluded_model_families": [
+    "Fable",
+    "Carbon",
+    "Astra"
+  ],
   "public_api_markers": {
     "label": "No publicly available API",
     "source_url": "https://artificialanalysis.ai/_next/static/chunks/25897-e15b0a6a7b942c64.js",

@@ -40,6 +40,42 @@ def agent_page(rows, declared=None):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_requested_families_are_excluded_before_developer_selection(self):
+        models = [
+            model("fable-max", 99, "anthropic", "max", name="Claude Fable 5.2 (Max)"),
+            model("fable-high", 98, "anthropic", "high", name="Claude Fable 5.1 (High)"),
+            model("opus-max", 60, "anthropic", "max", name="Claude Opus 5.5 (Max)"),
+            model("sonnet", 55, "anthropic", "max"),
+            model("carbon-high", 97, "google", "high", name="Gemini 4 CARBON (High)"),
+            model("carbon-low", 96, "google", "low", name="Gemini 4 Carbon (Low)"),
+            model("hydrogen", 59, "google", "xhigh"),
+            model("astra-max", 95, "openai", "max", name="GPT-6 Astra (Max)"),
+            model("astra-low", 94, "openai", "low", name="GPT-6 Astra (Low)"),
+            model("sol-max", 58, "openai", "max"),
+            model("sol-low", 50, "openai", "low"),
+        ]
+        self.assertEqual([row["slug"] for row in rating.select_models(models, min_score=0)],
+                         ["opus-max", "hydrogen", "sol-max"])
+        self.assertIsNone(rating.excluded_intelligence_family(model("astral", 100)))
+        self.assertIsNone(rating.excluded_intelligence_family(model("carbonic", 100)))
+
+    def test_family_exclusions_do_not_apply_to_coding(self):
+        models = [model("fable", 99, "anthropic"), model("carbon", 98, "google"),
+                  model("astra", 97, "openai")]
+        agents = [agent(m["slug"], m["name"], .5, m["creator"]["slug"]) for m in models]
+        rows, excluded = rating.select_agents(agents, models)
+        self.assertEqual({row["slug"] for row in rows}, {"fable", "carbon", "astra"})
+        self.assertEqual(excluded, [])
+
+    def test_flash_reference_does_not_use_the_previous_27b_release(self):
+        flash = model("flash", 28.580123456789, "alibaba", release={"slug": "qwen3-8-flash-next"})
+        old = model("27b", 20, "alibaba", release={"slug": "qwen3-8-27b"})
+        equal = model("equal", flash["intelligenceIndex"], "other")
+        below = model("below", flash["intelligenceIndex"] - 1e-10, "third")
+        self.assertEqual(rating.reference_model([old, flash])["slug"], "flash")
+        self.assertEqual({row["slug"] for row in rating.select_models([old, flash, equal, below])},
+                         {"flash", "equal"})
+
     def test_reference_threshold_tracks_current_best_measured_setting(self):
         release = {"slug": rating.REFERENCE_RELEASE}
         reference = model("reference-xhigh", 20.1068756031705, "alibaba", "xhigh", release=release)
@@ -381,6 +417,7 @@ class OutputTests(unittest.TestCase):
             self.assertEqual(metadata["developers_shown"], 2)
             self.assertEqual(metadata["minimum_score_inclusive"], 35)
             self.assertEqual(metadata["reference_model"]["slug"], "second")
+            self.assertEqual(metadata["excluded_model_families"], ["Fable", "Carbon", "Astra"])
             self.assertTrue(metadata["public_api_required"])
             self.assertEqual(metadata["restricted_effort"], {})
             self.assertGreaterEqual(metadata["layout"]["minimum_flag_value_gap_points"], 6)
@@ -392,6 +429,7 @@ class OutputTests(unittest.TestCase):
             self.assertIn("text;image;audio;video", (output / "rating.csv").read_text(encoding="utf-8-sig"))
             svg = (output / "rating.svg").read_text(encoding="utf-8")
             self.assertIn("https://t.me/warlocksu", svg)
+            self.assertIn("Исключены семейства: Fable, Carbon, Astra", svg)
             self.assertIn("<pattern", svg)
             self.assertRegex(svg, r'font-size: 10px[^>]*>DeepSeek V4\.1 Flash 1017 \(max\)</text>')
             self.assertRegex(svg, r'font-size: 8px[^>]*>\$0\.006 \| \$0\.30 \| \$1\.20</text>')
@@ -423,6 +461,7 @@ class OutputTests(unittest.TestCase):
             self.assertFalse(metadata["routers_included"])
             self.assertIsNone(metadata["minimum_score_inclusive"])
             self.assertEqual(metadata["score_filter"], "none")
+            self.assertNotIn("excluded_model_families", metadata)
             self.assertIn("Harness", (root / "replay/coding-agents/rating.csv").read_text(encoding="utf-8-sig"))
             agent_svg = (root / "replay/coding-agents/rating.svg").read_text(encoding="utf-8")
             self.assertRegex(agent_svg, r'font-size: 10px[^>]*>first</text>')

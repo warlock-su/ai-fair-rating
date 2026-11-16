@@ -4,7 +4,7 @@
 
 Skill и один Python-скрипт строят два рейтинга: [Artificial Analysis Intelligence Index](https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index) и [Artificial Analysis Coding Agent Index](https://artificialanalysis.ai/agents/coding-agents). Режимы и версии одной компании не занимают несколько мест на графике.
 
-Данные опубликованных графиков: **16 ноября 2026**. Intelligence Index v5.0.1 — **17 разработчиков**, Coding Agent Index v2.1 — **12 разработчиков**. Qwen4 Max представляет Alibaba в Intelligence Index: **42,89 балла, 6-е место**. В Coding Agent Index результата Qwen4 Max пока нет; Alibaba представляет Qwen3.8 Max.
+Данные опубликованных графиков: **16 ноября 2026**. Intelligence Index v5.0.1 — **14 разработчиков**, порог Qwen3.8-Flash-Next — **28,58 балла**, исключены Fable, Carbon и Astra. Coding Agent Index v2.1 — **12 разработчиков**. Qwen4 Max представляет Alibaba в Intelligence Index: **42,89 балла, 6-е место**. В Coding Agent Index результата Qwen4 Max пока нет; Alibaba представляет Qwen3.8 Max.
 
 ![AI Fair Rating](examples/rating.png)
 
@@ -17,11 +17,11 @@ Skill и один Python-скрипт строят два рейтинга: [Art
 1. Загружается полный публичный каталог [Artificial Analysis](https://artificialanalysis.ai/models). Каталог страницы сравнения `/models/comparisons` больше не содержит стран разработчиков.
 2. Остаются только числовые результаты; записи без балла исключаются. AA больше не публикует признак оценочного балла, поэтому любой числовой балл считается результатом измерения (так же и в Coding Agent Index).
 3. У модели должен быть хотя бы один API-провайдер в каталоге AA: **`hostModelCount > 0`**, и она **не должна иметь пометку «No publicly available API»**. В текущем формате AA публикует явный список провайдеров `hosts`: при свежей загрузке скрипт проверяет его структуру и уникальность slug, сохраняет список и записывает его длину в `hostModelCount`. Если источник также передаёт число, оно должно совпадать с длиной списка. Сохранённые снимки не дополняются задним числом. Явная пометка имеет приоритет над числом провайдеров. Отсутствие данных или неверный формат вызывают понятную ошибку. Доступность не определяется по цене, названию модели, открытым весам или одному лишь числу провайдеров.
-4. Для всех компаний разрешены любые доступные по API режимы рассуждения, включая **max**. Исключений по разработчику или названию модели нет.
-5. По `creator.id` выбирается одна модель с максимальным исходным баллом.
-6. Минимальный результат — **текущий балл Qwen3.8 27B** (релиз `qwen3-8-27b`) в лучшем доступном по API режиме. Проходят модели с таким же или более высоким баллом. Порог пересчитывается из того же снимка AA при каждом запуске; фиксированного числа нет. Отбор и сортировка выполняются до округления; подписи показывают два знака.
+4. Для всех компаний разрешены любые доступные по API режимы рассуждения, включая **max**. Только в Intelligence Index по запросу автора исключены семейства **Fable, Carbon и Astra**: отдельные слова в исходном названии AA без учёта регистра, все релизы и режимы. Исключения указаны на графике и в `metadata.json` как `excluded_model_families`.
+5. По `creator.id` выбирается одна модель с максимальным исходным баллом среди оставшихся подходящих моделей.
+6. Минимальный результат — **текущий балл Qwen3.8-Flash-Next** (релиз `qwen3-8-flash-next`, название запрошенной Qwen3.8 Flash в AA) в лучшем доступном по API режиме. Проходят модели с таким же или более высоким баллом. Порог пересчитывается из того же снимка AA при каждом запуске; фиксированного числа нет. Отбор и сортировка выполняются до округления; подписи показывают два знака.
 
-Qwen3.8 27B выбрана ориентиром локальной модели. На графике указаны опорная модель и её балл; в `metadata.json` сохраняются точный балл, режим, slug и ссылка. Если числового API-результата опорной модели нет, скрипт выдаёт ошибку, не заменяя порог старым числом. Отдельный столбец для опорной модели не добавляется, если у Alibaba есть более сильная подходящая модель.
+Qwen3.8-Flash-Next выбрана опорной моделью для отсечения Intelligence Index. На графике указаны опорная модель и её балл; в `metadata.json` сохраняются точный балл, режим, slug и ссылка. Если числового API-результата опорной модели нет, скрипт выдаёт ошибку, не заменяя порог старым числом. Отдельный столбец для опорной модели не добавляется, если у Alibaba есть более сильная подходящая модель.
 
 Страны и названия разработчиков берутся из самого источника. Количество компаний меняется с обновлением данных. Это сравнение достижений в одном индексе при указанных настройках; оно не утверждает равный вычислительный бюджет или доступность модели в определённой подписке. Название режима max само по себе не доказывает мультиагентность.
 
@@ -41,7 +41,7 @@ AA хранит список моделей с пометкой «No publicly av
 
 Для Coding Agent Index берётся опубликованный `indexScore × 100` без округления до отбора. Принимается любой числовой балл; записи без балла исключаются. Балл вне исходной шкалы 0..1 вызывает ошибку.
 
-Модель сопоставляется с полным каталогом по разработчику и точному имени/короткому имени без учёта регистра. Релизы и режимы не подменяются; неоднозначность вызывает ошибку. Из каталога берутся доступность API (`hostModelCount > 0` и отсутствие пометки «No publicly available API»), страна, открытые веса и типы ввода. Балл Intelligence Index при этом не используется: для coding-рейтинга он может отсутствовать. После отбора выбирается одна лучшая конфигурация на разработчика, **без порога по баллам**, включая нулевые результаты. Уровень Qwen3.8 27B ограничивает только Intelligence Index.
+Модель сопоставляется с полным каталогом по разработчику и точному имени/короткому имени без учёта регистра. Релизы и режимы не подменяются; неоднозначность вызывает ошибку. Из каталога берутся доступность API (`hostModelCount > 0` и отсутствие пометки «No publicly available API»), страна, открытые веса и типы ввода. Балл Intelligence Index при этом не используется: для coding-рейтинга он может отсутствовать. После отбора выбирается одна лучшая конфигурация на разработчика, **без порога по баллам**, включая нулевые результаты. Порог Qwen3.8-Flash-Next и исключения Fable, Carbon, Astra действуют только в Intelligence Index.
 
 Иконки ввода и штриховка описывают модель, а не дополнительные возможности оболочки.
 
@@ -92,7 +92,7 @@ python skills/ai-fair-rating/scripts/rating.py --output output
 python skills/ai-fair-rating/scripts/rating.py --snapshot output/snapshot.json --agents-snapshot output/coding-agents/snapshot.json --output output/replay
 ```
 
-Дата исходного снимка сохраняется. Порог Intelligence Index берётся у Qwen3.8 27B из этого же снимка. Новые флаги при необходимости загружаются отдельно; уже используемые флаги входят в skill.
+Дата исходного снимка сохраняется. Порог Intelligence Index берётся у Qwen3.8-Flash-Next из этого же снимка. Новые флаги при необходимости загружаются отдельно; уже используемые флаги входят в skill.
 
 Необязательные параметры:
 
@@ -143,4 +143,4 @@ python -m unittest discover -s tests -v
 
 Код и инструкции: [MIT](LICENSE). Флаги: Twemoji 14.0.2, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), Twitter, Inc. and other contributors; [атрибуция](skills/ai-fair-rating/assets/flags/ATTRIBUTION.md).
 
-AI Fair Rating is a reusable agent skill and CLI that builds both Artificial Analysis Intelligence Index and Coding Agent Index charts by default. Each model developer's best measured API result, unrestricted reasoning effort, and reproducible snapshots. Intelligence scores must meet or exceed the current best measured API result of Qwen3.8 27B; Coding Agent scores have no minimum. Coding charts exclude mixed-model routers and unavailable configurations and name the evaluated harness. The skill instructions are in English; chart labels and this guide are in Russian.
+AI Fair Rating is a reusable agent skill and CLI that builds both Artificial Analysis Intelligence Index and Coding Agent Index charts by default. Each model developer's best measured API result, unrestricted reasoning effort, and reproducible snapshots. Intelligence excludes the user-requested Fable, Carbon and Astra families, then selects each developer's best remaining model at or above the current best measured API result of Qwen3.8-Flash-Next. Coding Agent scores have no minimum or model-family exclusions. Coding charts exclude mixed-model routers and unavailable configurations and name the evaluated harness. The skill instructions are in English; chart labels and this guide are in Russian.

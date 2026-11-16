@@ -20,7 +20,8 @@ from urllib.request import Request, urlopen
 
 SOURCE = "https://artificialanalysis.ai/models"
 AGENT_SOURCE = "https://artificialanalysis.ai/agents/coding-agents"
-REFERENCE_RELEASE = "qwen3-8-27b"
+REFERENCE_RELEASE = "qwen3-8-flash-next"
+INTELLIGENCE_EXCLUDED_FAMILIES = ("Fable", "Carbon", "Astra")
 SKILL_DIR = Path(__file__).resolve().parents[1]
 FLAG_SOURCE = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/"
 INPUT_MODALITIES = (("text", "inputModalityText", "Текст"),
@@ -294,13 +295,19 @@ def reference_model(models):
     return min(eligible, key=lambda m: (-m["score"], m["slug"]))
 
 
+def excluded_intelligence_family(model):
+    """Apply the requested family exclusions to Intelligence only, across all settings."""
+    return next((family for family in INTELLIGENCE_EXCLUDED_FAMILIES
+                 if re.search(r"\b" + re.escape(family) + r"\b", model["name"], re.IGNORECASE)), None)
+
+
 def select_models(models, min_score=None):
     if min_score is None:
         min_score = reference_model(models)["score"]
     candidates = []
     for model in models:
         score = model.get("intelligenceIndex")
-        if not finite_number(score):
+        if not finite_number(score) or excluded_intelligence_family(model):
             continue
         candidate = model_details(model)
         if candidate:
@@ -506,6 +513,9 @@ def render_chart(rows, snapshot, output, reference, telegram, website, coding=Fa
             f"Одна лучшая модель на компанию · API · результат ≥ {reference['name']} ({reference['score']:.2f})")
     fig.text(.062, .862, rule,
              fontproperties=regular, fontsize=11.5, color="#515965")
+    if not coding:
+        fig.text(.062, .837, "Исключены семейства: " + ", ".join(INTELLIGENCE_EXCLUDED_FAMILIES),
+                 fontproperties=regular, fontsize=10.5, color="#515965")
     for y, url in ((.954, telegram), (.925, website)):
         fig.text(.985, y, url, ha="right", fontproperties=regular, fontsize=11,
                  color="#414a56", url=url)
@@ -641,6 +651,8 @@ def write_result(rows, snapshot, output, args, coding=False, model_snapshot=None
                      "layout": layout})
     if reference:
         metadata["reference_model"] = reference
+    if not coding:
+        metadata["excluded_model_families"] = list(INTELLIGENCE_EXCLUDED_FAMILIES)
     catalog = model_snapshot if coding else snapshot
     if "public_api_markers" in catalog:
         metadata["public_api_markers"] = catalog["public_api_markers"]
