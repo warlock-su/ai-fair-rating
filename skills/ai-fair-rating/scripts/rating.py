@@ -18,7 +18,7 @@ from decimal import Decimal
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
-SOURCE = "https://artificialanalysis.ai/models/comparisons"
+SOURCE = "https://artificialanalysis.ai/models"
 AGENT_SOURCE = "https://artificialanalysis.ai/agents/coding-agents"
 REFERENCE_RELEASE = "qwen3-8-27b"
 SKILL_DIR = Path(__file__).resolve().parents[1]
@@ -161,6 +161,9 @@ def fetch_api_markers(page):
     def inspect(url):
         script = download(url).decode("utf-8")
         ids = parse_unavailable_api_ids(script)
+        if ids is None and "No publicly available API" in script:
+            raise ValueError(f"No publicly available API marker format changed in {url}. "
+                             "Update the source parser; do not ignore an unrecognized marker source.")
         if ids is not None:
             return {"label": "No publicly available API", "source_url": url,
                     "source_sha256": hashlib.sha256(script.encode("utf-8")).hexdigest(),
@@ -169,10 +172,17 @@ def fetch_api_markers(page):
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         matches = [result for result in pool.map(inspect, scripts) if result is not None]
-    if len(matches) != 1:
+    if not matches:
         raise ValueError("No unique No publicly available API marker catalog found in the public client. "
                          "Update the source parser; do not rely on hostModelCount alone.")
-    return matches[0]
+    # The same availability module can be bundled into several public chunks.
+    # Accept copies only when their exact model-ID sets agree.
+    ids = set(matches[0]["unavailable_model_ids"])
+    if any(set(match["unavailable_model_ids"]) != ids for match in matches[1:]):
+        raise ValueError("Conflicting No publicly available API marker catalogs in the public client. "
+                         "Update the source parser; do not choose one list or rely on hostModelCount alone.")
+    return {**matches[0], "sources": [
+        {key: match[key] for key in ("source_url", "source_sha256")} for match in matches]}
 
 
 def fetch_snapshot():
@@ -195,6 +205,20 @@ def fetch_snapshot():
     for model in models:
         if not isinstance(model.get("id"), str) or not model["id"]:
             raise ValueError("Missing model ID for public API marker matching; update the source parser.")
+        hosts = model.get("hosts")
+        if not isinstance(hosts, list) or any(
+                not isinstance(host, dict) or not all(isinstance(host.get(key), str) and host[key].strip()
+                                                     for key in ("slug", "name")) for host in hosts):
+            raise ValueError(f"Missing or invalid API provider list (hosts) for {model.get('slug', '?')}. "
+                             "Update the source parser; do not infer API availability.")
+        if len({host["slug"] for host in hosts}) != len(hosts):
+            raise ValueError(f"Duplicate API providers in hosts for {model.get('slug', '?')}; check the source.")
+        if "hostModelCount" in model and (type(model["hostModelCount"]) is not int or
+                                         model["hostModelCount"] != len(hosts)):
+            raise ValueError(f"API provider count disagrees with hosts for {model.get('slug', '?')}; check the source.")
+        # Current catalogs publish the explicit provider list instead of a count.
+        # Normalize fresh fetches only; old snapshots still require recorded availability.
+        model["hostModelCount"] = len(hosts)
         model["aa_public_api_unavailable"] = model["id"] in unavailable
     return {"source_url": SOURCE, "fetched_at": datetime.now(timezone.utc).isoformat(),
             "index_version": version, "models": models, "public_api_markers": markers}
@@ -367,13 +391,14 @@ def format_api_price(row, field):
     return f"${dollars}.{fraction.rstrip('0').ljust(2, '0')}"
 
 
-def input_icon(kind):
+def input_icon(kind, scale=.64):
     """Small vector pictograms, shared by the bars and their legend."""
     from matplotlib.lines import Line2D
     from matplotlib.offsetbox import DrawingArea
     from matplotlib.patches import Arc, Circle, FancyBboxPatch, Polygon, Rectangle
+    from matplotlib.transforms import Affine2D
 
-    icon = DrawingArea(24, 24)
+    icon = DrawingArea(24 * scale, 24 * scale)
     icon.add_artist(FancyBboxPatch((.5, .5), 23, 23, boxstyle="round,pad=0,rounding_size=4",
                                   facecolor="white", edgecolor="#cbd1da", linewidth=.6))
     stroke = {"edgecolor": "#263342", "facecolor": "none", "linewidth": 1.25}
@@ -400,6 +425,10 @@ def input_icon(kind):
         icon.add_artist(Polygon([(15, 10), (19, 7), (19, 17), (15, 14)], closed=True, **stroke))
     else:
         raise ValueError(f"Unknown input icon: {kind}")
+    if scale != 1:
+        for artist in icon.get_children():
+            artist.set_transform(Affine2D().scale(scale) + icon.get_transform())
+            artist.set_linewidth(artist.get_linewidth() * scale)
     return icon
 
 
@@ -409,7 +438,7 @@ def render_chart(rows, snapshot, output, reference, telegram, website, coding=Fa
     import matplotlib.pyplot as plt
     from matplotlib.colors import is_color_like
     from matplotlib.font_manager import FontProperties
-    from matplotlib.offsetbox import AnnotationBbox, OffsetImage
+    from matplotlib.offsetbox import AnnotationBbox, DrawingArea, HPacker, OffsetImage, TextArea
     from matplotlib.patches import Rectangle
     from matplotlib.transforms import ScaledTranslation
     from PIL import Image
@@ -480,18 +509,20 @@ def render_chart(rows, snapshot, output, reference, telegram, website, coding=Fa
     for y, url in ((.954, telegram), (.925, website)):
         fig.text(.985, y, url, ha="right", fontproperties=regular, fontsize=11,
                  color="#414a56", url=url)
-    fig.text(.062, .811, "Ввод модели:", fontproperties=regular, fontsize=10.5,
-             color="#515965", va="center")
-    for index, (kind, _, label) in enumerate(INPUT_MODALITIES):
-        x = .155 + index * .079
-        fig.add_artist(AnnotationBbox(input_icon(kind), (x, .811), xycoords=fig.transFigure,
-                                      frameon=False, pad=0))
-        fig.text(x, .811, label, transform=fig.transFigure + ScaledTranslation(18 / 72, 0, fig.dpi_scale_trans),
-                 fontproperties=regular, fontsize=10.5, va="center", color="#515965")
-    fig.add_artist(Rectangle((.51, .801), .022, .020, transform=fig.transFigure,
-                             facecolor="#697586", edgecolor=(1, 1, 1, .65), linewidth=0, hatch="///"))
-    fig.text(.542, .811, "Открытые веса модели", fontproperties=regular, fontsize=10.5,
-             va="center", color="#515965")
+    legend_text = {"fontproperties": regular, "fontsize": 10.5, "color": "#515965"}
+    legend_items = [TextArea("Ввод модели:", textprops=legend_text)]
+    for kind, _, label in INPUT_MODALITIES:
+        legend_items.append(HPacker(children=[input_icon(kind), TextArea(label, textprops=legend_text)],
+                                    align="center", pad=0, sep=5))
+    weights_icon = DrawingArea(19.2, 15.36)
+    weights_icon.add_artist(Rectangle((0, 1.92), 19.2, 11.52, facecolor="#697586",
+                                      edgecolor=(1, 1, 1, .65), linewidth=0, hatch="///"))
+    legend_items.append(HPacker(children=[weights_icon, TextArea("Открытые веса модели", textprops=legend_text)],
+                                align="center", pad=0, sep=5))
+    legend = AnnotationBbox(HPacker(children=legend_items, align="center", pad=0, sep=14),
+                            (.062, .811), xycoords=fig.transFigure, box_alignment=(0, .5),
+                            frameon=False, pad=0)
+    fig.add_artist(legend)
     data_date = datetime.fromisoformat(snapshot["fetched_at"]).strftime("%d.%m.%Y")
     footer_label = fig.text(.062, .064, f"{len(rows)} разработчиков · индекс v{snapshot['index_version']} · данные AA: {data_date} (UTC)",
                             fontproperties=regular, fontsize=11, color="#515965")
@@ -510,18 +541,19 @@ def render_chart(rows, snapshot, output, reference, telegram, website, coding=Fa
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     input_icons = []
+    icon_size, icon_gap, icon_bottom = 15.36, 3.92, 9
+    step = icon_size + icon_gap
     for bar, row, value in zip(bars, rows, values):
         center = bar.get_x() + bar.get_width() / 2
         count = len(row["input_modalities"])
         height_points = bar.get_window_extent(renderer).height * 72 / fig.dpi
-        step = min(29, (height_points - 36) / (count - 1)) if count > 1 else 29
-        inside = height_points >= 36 and step >= 24
+        stack_height = count * icon_size + max(0, count - 1) * icon_gap
+        inside = height_points >= icon_bottom + stack_height + 3
         if not inside and count:
-            step = 29
-            value.set_position((0, count * step + 11))
+            value.set_position((0, icon_bottom + stack_height + 7))
         anchor = (center, 0 if inside else row["score"])
         for index, kind in enumerate(row["input_modalities"]):
-            icon_box = AnnotationBbox(input_icon(kind), anchor, xybox=(0, 9 + index * step),
+            icon_box = AnnotationBbox(input_icon(kind), anchor, xybox=(0, icon_bottom + index * step),
                                        boxcoords="offset points", box_alignment=(.5, 0),
                                        frameon=False, pad=0, zorder=4)
             ax.add_artist(icon_box)
@@ -550,9 +582,13 @@ def render_chart(rows, snapshot, output, reference, telegram, website, coding=Fa
     if min(gaps) < 6:
         plt.close(fig)
         raise ValueError("Layout check failed: country flags are too close to score labels.")
-    clearances = []
+    clearances, icon_gaps = [], []
+    previous_bar = previous_badge = None
     for bar, icon, inside, value in input_icons:
         bounds, badge = bar.get_window_extent(renderer), icon.get_window_extent(renderer)
+        if bar is previous_bar:
+            icon_gaps.append((badge.y0 - previous_badge.y1) * 72 / fig.dpi)
+        previous_bar, previous_badge = bar, badge
         if inside:
             clearances.append(min(badge.x0 - bounds.x0, bounds.x1 - badge.x1,
                                   badge.y0 - bounds.y0, bounds.y1 - badge.y1) * 72 / fig.dpi)
@@ -562,6 +598,9 @@ def render_chart(rows, snapshot, output, reference, telegram, website, coding=Fa
     if clearances and min(clearances) < 0:
         plt.close(fig)
         raise ValueError("Layout check failed: input icons do not fit inside the bars.")
+    if icon_gaps and min(icon_gaps) < 3:
+        plt.close(fig)
+        raise ValueError("Layout check failed: input icons are too close to each other.")
     for extension in ("png", "svg"):
         target = output / f"rating.{extension}"
         fig.savefig(target, dpi=180)
@@ -574,6 +613,7 @@ def render_chart(rows, snapshot, output, reference, telegram, website, coding=Fa
             "open_weight_bars_hatched": sum(row["open_weights"] for row in rows),
             "input_icons_shown": len(input_icons),
             "input_icons_above_short_bars": sum(not inside for _, _, inside, _ in input_icons),
+            "minimum_input_icon_gap_points": round(min(icon_gaps), 2) if icon_gaps else None,
             "minimum_input_icon_bar_clearance_points": round(min(clearances), 2) if clearances else None}
 
 

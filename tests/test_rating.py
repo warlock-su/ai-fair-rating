@@ -173,7 +173,8 @@ class SourceTests(unittest.TestCase):
         manifest = {"path": "/data/catalog.txt", "key": "ab" * 32}
         page = ('Intelligence Index v5.0 2 of 2 models<script src="/_next/static/chunks/availability.js"></script>'
                 '<script>self.__next_f.push(' + json.dumps([1, json.dumps({"manifest": manifest})]) + ')</script>')
-        models = [model("unavailable", 60, id=identifier, hostModelCount=1), model("available", 40, id="other-id")]
+        models = [model("unavailable", 60, id=identifier, hosts=[{"slug": "one", "name": "One"}]),
+                  model("available", 40, id="other-id", hosts=[{"slug": "two", "name": "Two"}])]
         payloads = {rating.SOURCE: page.encode(), "https://artificialanalysis.ai/data/catalog.txt": b"encrypted",
                     "https://artificialanalysis.ai/_next/static/chunks/availability.js": script.encode()}
         with patch.object(rating, "download", side_effect=lambda url: payloads[url]), patch.object(
@@ -184,6 +185,67 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(snapshot["public_api_markers"]["unavailable_model_ids"], [identifier])
         self.assertEqual([r["slug"] for r in rating.select_models(snapshot["models"], min_score=35)], ["available"])
         with patch.object(rating, "download", return_value=b"client schema changed"), self.assertRaisesRegex(ValueError, "marker catalog"):
+            rating.fetch_api_markers(page)
+
+    def test_fresh_catalog_normalizes_only_valid_explicit_provider_lists(self):
+        manifest = {"path": "/data/catalog.txt", "key": "ab" * 32}
+        page = ('Intelligence Index v5.0.1 1 of 1 models<script>self.__next_f.push('
+                + json.dumps([1, json.dumps({"manifest": manifest})]) + ')</script>')
+        entry = model("current-schema", 40, id="model-id", hosts=[{"slug": "provider", "name": "Provider"}])
+        del entry["hostModelCount"]
+
+        def fetch():
+            with patch.object(rating, "download", return_value=page.encode()), patch.object(
+                    rating, "decode_catalog", return_value={"models": [entry.copy()]}), patch.object(
+                    rating, "fetch_api_markers", return_value={"unavailable_model_ids": []}):
+                return rating.fetch_snapshot()["models"][0]
+
+        self.assertEqual(fetch()["hostModelCount"], 1)
+        self.assertNotIn("hostModelCount", entry)
+        entry["hosts"] = []
+        self.assertEqual(fetch()["hostModelCount"], 0)
+        for invalid in (None, {}, "provider", [None], [{}], [{"slug": "provider", "name": ""}],
+                        [{"slug": "provider", "name": "Provider"}] * 2):
+            entry["hosts"] = invalid
+            with self.subTest(hosts=invalid), self.assertRaisesRegex(ValueError, "hosts"):
+                fetch()
+        del entry["hosts"]
+        with self.assertRaisesRegex(ValueError, "hosts"):
+            fetch()
+        entry["hosts"] = [{"slug": "provider", "name": "Provider"}]
+        for invalid in (None, True, -1, 1.0, "1", 2):
+            entry["hostModelCount"] = invalid
+            with self.subTest(count=invalid), self.assertRaisesRegex(ValueError, "count disagrees"):
+                fetch()
+
+    def test_duplicate_api_marker_chunks_must_agree(self):
+        ids = ["e994a6e0-d36b-4dab-8ae1-c1b469e4d9e2", "909ed0ba-bcc5-4f38-8162-08a4e187a772"]
+        urls = ["https://artificialanalysis.ai/_next/static/chunks/one.js",
+                "https://artificialanalysis.ai/_next/static/chunks/two.js"]
+        page = "".join('<script src="' + url + '"></script>' for url in urls)
+
+        def script(values):
+            return ('let s=new Set(' + json.dumps(values) + '),l="No publicly available API",'
+                    'i="checkered",o={[i]:l};').encode()
+
+        payloads = {urls[0]: script(ids), urls[1]: script(list(reversed(ids)))}
+        with patch.object(rating, "download", side_effect=lambda url: payloads[url]):
+            markers = rating.fetch_api_markers(page)
+        self.assertEqual(markers["unavailable_model_ids"], ids)
+        self.assertEqual(markers["sources"], [
+            {"source_url": url, "source_sha256": hashlib.sha256(payloads[url]).hexdigest()} for url in urls])
+
+        payloads[urls[1]] = script(ids[:1])
+        with patch.object(rating, "download", side_effect=lambda url: payloads[url]), self.assertRaisesRegex(
+                ValueError, "Conflicting.*marker catalogs"):
+            rating.fetch_api_markers(page)
+        payloads[urls[1]] = script(["malformed-id"])
+        with patch.object(rating, "download", side_effect=lambda url: payloads[url]), self.assertRaisesRegex(
+                ValueError, "Invalid.*model IDs"):
+            rating.fetch_api_markers(page)
+        payloads[urls[1]] = script(ids).replace(b'"checkered"', b'"changed-pattern"')
+        with patch.object(rating, "download", side_effect=lambda url: payloads[url]), self.assertRaisesRegex(
+                ValueError, "marker format changed"):
             rating.fetch_api_markers(page)
 
     def test_agent_full_catalog_references_not_highlights(self):
@@ -265,6 +327,23 @@ class AgentSelectionTests(unittest.TestCase):
 
 
 class OutputTests(unittest.TestCase):
+    def test_compact_multimodal_stack_fits_a_mid_height_bar(self):
+        rows = rating.select_models([
+            model("tall", 64.56),
+            model("multimodal", 29.89, "other", inputModalityImage=True,
+                  inputModalitySpeech=True, inputModalityVideo=True),
+        ], min_score=0)
+        snapshot = {"source_url": rating.SOURCE, "fetched_at": "2026-11-10T15:35:37+00:00",
+                    "index_version": "5.0.1"}
+        with tempfile.TemporaryDirectory() as directory:
+            layout = rating.render_chart(rows, snapshot, Path(directory),
+                                         {"name": "Reference", "score": 0}, "", "")
+        self.assertEqual(layout["input_icons_shown"], 5)
+        self.assertEqual(layout["input_icons_above_short_bars"], 0)
+        self.assertGreaterEqual(layout["minimum_input_icon_bar_clearance_points"], 3)
+        self.assertAlmostEqual(layout["minimum_input_icon_gap_points"], 3.92)
+        self.assertGreaterEqual(layout["minimum_flag_value_gap_points"], 6)
+
     def test_coding_only_renders_zero_without_a_reference_or_score_cutoff(self):
         models = {"source_url": rating.SOURCE, "fetched_at": "2026-10-28T21:00:00+00:00",
                   "index_version": "5.0", "models": [model("zero", None, inputModalityImage=True,
