@@ -298,6 +298,32 @@ class SourceTests(unittest.TestCase):
             with self.subTest(page=bad_page[:80]), self.assertRaises(ValueError):
                 rating.parse_agents_page(bad_page)
 
+    def test_harness_comparison_matches_exact_variant_when_run_omits_effort(self):
+        run = agent("devin", "Model Flash", .6, model=None)
+        peer = agent("peer", "Model Flash (Max)", .5, model={"name": "Model Flash (Max)", "effort": {"slug": "max"}})
+        other = agent("other", "Model Flash (High)", .4, model={"name": "Model Flash (High)", "effort": {"slug": "high"}})
+        comparisons = [{"modelSlug": "model-flash", "modelName": "Model Flash",
+                        "rows": [{"row": f"$a:props:benchmarkRows:{i}"} for i in range(2)]}]
+
+        def page():
+            flight = 'a:' + json.dumps(["$", "div", None, {"benchmarkRows": [run, peer, other]}]) + '\n'
+            flight += 'b:' + json.dumps(["$", "div", None, {"comparisons": comparisons}]) + '\n'
+            return ('Coding Agent Index v2.1 3 of 3 models<script>self.__next_f.push('
+                    + json.dumps([1, flight]) + ')</script>')
+
+        rows, _ = rating.parse_agents_page(page())
+        models = [model("flash-max", 40, effort="max", name="Model Flash (Max)", release={"slug": "model-flash"}),
+                  model("flash-high", 39, effort="high", name="Model Flash (High)", release={"slug": "model-flash"}),
+                  model("flash-without-setting", 41, name="Model Flash", release={"slug": "other-release"})]
+        [winner], _ = rating.select_agents(rows, models)
+        self.assertEqual((winner["agent_id"], winner["slug"], winner["effort"], winner["agent_model_label"]),
+                         ("devin", "flash-max", "max", "Model Flash"))
+        with self.assertRaisesRegex(ValueError, "uniquely match"):
+            rating.select_agents(rows, models[1:])
+        comparisons[0]["rows"].append({"row": "$a:props:benchmarkRows:2"})
+        with self.assertRaisesRegex(ValueError, "uniquely identify.*Harness Comparisons variant"):
+            rating.parse_agents_page(page())
+
     def test_public_payload_decoding(self):
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 

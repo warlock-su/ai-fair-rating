@@ -1,15 +1,15 @@
 ﻿rank,company,country,model,score,effort,api_provider_count,input_modalities,open_weights,url
-1,Anthropic,us,"Claude Opus 5.5 (Max, Default Fallback)",59.1060336078904,max,4,text;image,False,https://artificialanalysis.ai/models/claude-opus-5-5
-2,OpenAI,us,GPT-6.1 Sol (Max),54.6087338138148,max,2,text;image,False,https://artificialanalysis.ai/models/gpt-6-1-sol
-3,Google,us,Gemini 4 Hydrogen (Xhigh),53.9192287317542,xhigh,1,text;image;audio;video,False,https://artificialanalysis.ai/models/gemini-4-hydrogen
-4,Kimi,cn,Kimi K3.1 Pro,46.4526236744189,max,17,text;image,True,https://artificialanalysis.ai/models/kimi-k3-1-pro
+1,Google,us,Gemini 4 Neon (Xhigh),61.3982491392674,xhigh,1,text;image;audio;video,False,https://artificialanalysis.ai/models/gemini-4-neon
+2,Anthropic,us,"Claude Opus 5.5 (Max, Default Fallback)",59.1060336078904,max,4,text;image,False,https://artificialanalysis.ai/models/claude-opus-5-5
+3,OpenAI,us,GPT-6.2 Sol (Max),57.2576209885477,max,1,text;image,False,https://artificialanalysis.ai/models/gpt-6-2-sol
+4,Kimi,cn,Kimi K3.1 Pro,46.4526236744189,max,18,text;image,True,https://artificialanalysis.ai/models/kimi-k3-1-pro
 5,Meta,us,Muse Wonder (Max),43.5748225998431,max,1,text;image;audio;video,False,https://artificialanalysis.ai/models/muse-wonder
-6,Alibaba,cn,Qwen4 Max,42.8914543287565,xhigh,1,text;image,False,https://artificialanalysis.ai/models/qwen4-max
+6,Alibaba,cn,Qwen4 Max,42.8914543287565,xhigh,1,text;image;video,False,https://artificialanalysis.ai/models/qwen4-max
 7,SpaceXAI,us,Grok 4.7 (Xhigh),35.4850117067196,xhigh,1,text;image,False,https://artificialanalysis.ai/models/grok-4-7
-8,Tencent,cn,Tencent Hy4,34.5552385392508,,1,text;image,False,https://artificialanalysis.ai/models/tencent-hy4
-9,DeepSeek,cn,DeepSeek V4.1 Flash 1017 (Max),32.5896393532027,max,21,text;image,True,https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017
-10,Z AI,cn,GLM-5.3 (Max),31.653381843882,max,25,text,True,https://artificialanalysis.ai/models/glm-5-3
-11,Thinking Machines,us,Inkling 2 Small,30.6286781498958,,1,text;image,True,https://artificialanalysis.ai/models/inkling-2-small
+8,Tencent,cn,Tencent Hy4,34.5552385392508,,1,text;image,True,https://artificialanalysis.ai/models/tencent-hy4
+9,DeepSeek,cn,DeepSeek V4.1 Flash 1017 (Max),32.5896393532027,max,22,text;image,True,https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017
+10,Z AI,cn,GLM-5.3 (Max),31.653381843882,max,24,text,True,https://artificialanalysis.ai/models/glm-5-3
+11,Thinking Machines,us,Inkling 2 Small,30.6286781498958,,4,text;image,True,https://artificialanalysis.ai/models/inkling-2-small
 12,Xiaomi,cn,MiMo-V2.6-Pro,29.8897833093321,,4,text;image;audio;video,True,https://artificialanalysis.ai/models/mimo-v2-6-pro
 13,InclusionAI,cn,Ling 3.1 Flash 1019,29.570119369837,,1,text,True,https://artificialanalysis.ai/models/ling-3-1-flash
-14,MiniMax,cn,MiniMax-M3.1-Flash,29.0595214290458,max,12,text;image,True,https://artificialanalysis.ai/models/minimax-m3-1-flash
+14,MiniMax,cn,MiniMax-M3.1-Flash,29.0595214290458,max,13,text;image,True,https://artificialanalysis.ai/models/minimax-m3-1-flash

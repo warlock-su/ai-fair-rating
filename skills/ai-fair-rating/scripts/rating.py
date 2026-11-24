@@ -95,11 +95,14 @@ def parse_agents_page(page):
         return value
 
     catalogs = []
+    comparisons = []
 
     def find(value):
         if isinstance(value, dict):
             if "benchmarkRows" in value:
                 catalogs.append(resolve(value["benchmarkRows"]))
+            if "comparisons" in value:
+                comparisons.append(resolve(value["comparisons"]))
             for item in value.values():
                 find(item)
         elif isinstance(value, list):
@@ -119,7 +122,51 @@ def parse_agents_page(page):
     non_routers = sum(row.get("isRouter") is False for row in rows)
     if len({row['id'] for row in rows}) != len(rows) or non_routers != max(counts):
         raise ValueError(f"Incomplete Coding Agent catalog: {len(rows)} configurations, page declares {max(counts)} models.")
+    if comparisons:
+        if len(comparisons) != 1 or not isinstance(comparisons[0], list) or not comparisons[0]:
+            raise ValueError("Invalid Coding Agent Harness Comparisons catalog; update the source parser.")
+        record_harness_comparison_models(rows, comparisons[0])
     return rows, version.group(1)
+
+
+def record_harness_comparison_models(rows, groups):
+    """Keep the exact variant AA assigns to runs in its same-model comparison groups."""
+    by_id = {row["id"]: row for row in rows}
+    for group in groups:
+        if not isinstance(group, dict) or not all(
+                isinstance(group.get(key), str) and group[key] for key in ("modelSlug", "modelName")):
+            raise ValueError("Missing model identity in Coding Agent Harness Comparisons; update the source parser.")
+        entries = group.get("rows")
+        if not isinstance(entries, list) or not entries or any(
+                not isinstance(entry, dict) or not isinstance(entry.get("row"), dict)
+                or entry["row"].get("id") not in by_id for entry in entries):
+            raise ValueError("Invalid run reference in Coding Agent Harness Comparisons; update the source parser.")
+        members = [by_id[entry["row"]["id"]] for entry in entries]
+        unnamed = [row for row in members if "model" in row and row["model"] is None
+                   and row.get("display", {}).get("model") == group["modelName"]]
+        if not unnamed:
+            continue
+        variants = set()
+        for row in members:
+            variant = row.get("model")
+            if variant is None:
+                continue
+            name = variant.get("name") if isinstance(variant, dict) else None
+            setting = variant.get("effort") if isinstance(variant, dict) else None
+            effort = setting.get("slug") if isinstance(setting, dict) else None
+            if not isinstance(name, str) or not name or not isinstance(effort, str) or not effort:
+                raise ValueError(f"Missing exact model variant in Harness Comparisons for {group['modelSlug']!r}.")
+            variants.add((name, effort))
+        if len(variants) != 1:
+            raise ValueError(f"Cannot uniquely identify the Harness Comparisons variant for {group['modelSlug']!r}.")
+        name, effort = variants.pop()
+        if name == group["modelName"]:
+            continue
+        match = {"release_slug": group["modelSlug"], "name": name, "effort": effort}
+        for row in unnamed:
+            if "aa_harness_comparison_model" in row:
+                raise ValueError(f"Multiple Harness Comparisons model assignments for {row['id']}.")
+            row["aa_harness_comparison_model"] = match
 
 
 def fetch_agents_snapshot():
@@ -351,7 +398,17 @@ def select_agents(agents, models):
         label = agent.get("display", {}).get("model")
         if not isinstance(label, str):
             raise ValueError(f"Missing Coding Agent model label for {agent.get('id')}.")
-        matches = names.get((creators[0].get("slug"), model_name_key(label)), {})
+        creator_slug = creators[0].get("slug")
+        if "aa_harness_comparison_model" in agent:
+            variant = agent["aa_harness_comparison_model"]
+            if not isinstance(variant, dict) or not all(
+                    isinstance(variant.get(key), str) and variant[key] for key in ("name", "release_slug", "effort")):
+                raise ValueError(f"Invalid recorded Harness Comparisons model for {agent['id']}; refresh the snapshot.")
+            matches = {slug: model for slug, model in names.get((creator_slug, model_name_key(variant["name"])), {}).items()
+                       if (model.get("release") or {}).get("slug") == variant["release_slug"]
+                       and (model.get("effort") or {}).get("slug") == variant["effort"]}
+        else:
+            matches = names.get((creator_slug, model_name_key(label)), {})
         if len(matches) != 1:
             raise ValueError(f"Cannot uniquely match Coding Agent model {label!r} to API catalog "
                              f"({len(matches)} matches). Refresh both sources or update name matching.")
@@ -663,6 +720,11 @@ def write_result(rows, snapshot, output, args, coding=False, model_snapshot=None
                          "model_catalog_source_url": model_snapshot["source_url"],
                          "model_catalog_sha256": hashlib.sha256(json.dumps(model_snapshot, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
                          "excluded_configurations": excluded})
+        comparison_models = {row["id"]: row["aa_harness_comparison_model"] for row in snapshot["agents"]
+                             if "aa_harness_comparison_model" in row}
+        if comparison_models:
+            metadata["harness_comparison_model_matches"] = {
+                "source_url": AGENT_SOURCE + "#harness-comparisons", "models_by_configuration": comparison_models}
     (output / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{'Coding agents' if coding else 'Intelligence'}: {len(rows)} developers from {metadata['catalog_entries']} entries; "
           f"AA v{snapshot['index_version']}; data {snapshot['fetched_at']}")

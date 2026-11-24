@@ -1,8 +1,8 @@
 {
   "source_url": "https://artificialanalysis.ai/agents/coding-agents",
-  "fetched_at": "2026-11-16T04:38:27.292104+00:00",
+  "fetched_at": "2026-11-24T17:41:02.761097+00:00",
   "index_version": "2.1",
-  "catalog_entries": 29,
+  "catalog_entries": 66,
   "developers_shown": 12,
   "minimum_score_inclusive": null,
   "score_filter": "none",
@@ -10,7 +10,7 @@
   "public_api_required": true,
   "api_availability_field": "hostModelCount > 0 and aa_public_api_unavailable is False",
   "restricted_effort": {},
-  "snapshot_sha256": "ade8374ec7c2da7d2e3bd4c6b909b070f26edb2ac2b08c3fad520363be3f646c",
+  "snapshot_sha256": "214a23dc38d8bdfdd52fd7122443981e5d4388be435ddf14c70b381747fed5bc",
   "layout": {
     "minimum_flag_value_gap_points": 7.0,
     "minimum_label_footer_gap_points": 23.66,
@@ -22,24 +22,24 @@
   },
   "public_api_markers": {
     "label": "No publicly available API",
-    "source_url": "https://artificialanalysis.ai/_next/static/chunks/25897-e15b0a6a7b942c64.js",
-    "source_sha256": "603c2e47e9c630c7cebeda5c0cd969a66c9fa8b99622a88aeb13e13caf3c756a",
+    "source_url": "https://artificialanalysis.ai/_next/static/chunks/86187-75c32cb60b247bdd.js",
+    "source_sha256": "c2b53ff00eb71e6d6d49afa03ae56429c068f3118796cd7707f6e8c5e3d30ff7",
     "unavailable_model_ids": [
       "e994a6e0-d36b-4dab-8ae1-c1b469e4d9e2"
     ],
     "sources": [
       {
-        "source_url": "https://artificialanalysis.ai/_next/static/chunks/25897-e15b0a6a7b942c64.js",
-        "source_sha256": "603c2e47e9c630c7cebeda5c0cd969a66c9fa8b99622a88aeb13e13caf3c756a"
+        "source_url": "https://artificialanalysis.ai/_next/static/chunks/86187-75c32cb60b247bdd.js",
+        "source_sha256": "c2b53ff00eb71e6d6d49afa03ae56429c068f3118796cd7707f6e8c5e3d30ff7"
       }
     ]
   },
   "grouped_by": "model_creator.id",
   "routers_included": false,
   "score_scale": "indexScore * 100",
-  "model_catalog_fetched_at": "2026-11-16T04:38:26.662385+00:00",
+  "model_catalog_fetched_at": "2026-11-24T17:41:01.867549+00:00",
   "model_catalog_source_url": "https://artificialanalysis.ai/models",
-  "model_catalog_sha256": "7661877b316ed32b5c7decc1277ef3b283834aab1554965da64898251d168b77",
+  "model_catalog_sha256": "8012c8d6182aefda49178893f10d27deb0dac30ca3739db4108b1bfdcba82ee0",
   "excluded_configurations": [
     {
       "id": "e9150db5061429910b5341e4f8bdc7a1",
@@ -51,5 +51,15 @@
       "label": "Devin Fusion CLI - Claude Opus 5.5 Max + GPT-6 Luna High",
       "reason": "mixed_model_router"
     }
-  ]
+  ],
+  "harness_comparison_model_matches": {
+    "source_url": "https://artificialanalysis.ai/agents/coding-agents#harness-comparisons",
+    "models_by_configuration": {
+      "ccbc84fee48d3dad8838002184be5448": {
+        "release_slug": "glm-5-3-flash",
+        "name": "GLM-5.3-Flash (Max)",
+        "effort": "max"
+      }
+    }
+  }
 }

@@ -1,8 +1,8 @@
 {
   "source_url": "https://artificialanalysis.ai/models",
-  "fetched_at": "2026-11-16T04:38:26.662385+00:00",
+  "fetched_at": "2026-11-24T17:41:01.867549+00:00",
   "index_version": "5.0.1",
-  "catalog_entries": 742,
+  "catalog_entries": 766,
   "developers_shown": 14,
   "minimum_score_inclusive": 28.5750026655353,
   "score_filter": "at_least_reference_model",
@@ -10,12 +10,12 @@
   "public_api_required": true,
   "api_availability_field": "hostModelCount > 0 and aa_public_api_unavailable is False",
   "restricted_effort": {},
-  "snapshot_sha256": "7661877b316ed32b5c7decc1277ef3b283834aab1554965da64898251d168b77",
+  "snapshot_sha256": "8012c8d6182aefda49178893f10d27deb0dac30ca3739db4108b1bfdcba82ee0",
   "layout": {
     "minimum_flag_value_gap_points": 7.0,
     "minimum_label_footer_gap_points": 9.95,
-    "open_weight_bars_hatched": 7,
-    "input_icons_shown": 32,
+    "open_weight_bars_hatched": 8,
+    "input_icons_shown": 33,
     "input_icons_above_short_bars": 0,
     "minimum_input_icon_gap_points": 3.92,
     "minimum_input_icon_bar_clearance_points": 9.0
@@ -35,15 +35,15 @@
   ],
   "public_api_markers": {
     "label": "No publicly available API",
-    "source_url": "https://artificialanalysis.ai/_next/static/chunks/25897-e15b0a6a7b942c64.js",
-    "source_sha256": "603c2e47e9c630c7cebeda5c0cd969a66c9fa8b99622a88aeb13e13caf3c756a",
+    "source_url": "https://artificialanalysis.ai/_next/static/chunks/86187-75c32cb60b247bdd.js",
+    "source_sha256": "c2b53ff00eb71e6d6d49afa03ae56429c068f3118796cd7707f6e8c5e3d30ff7",
     "unavailable_model_ids": [
       "e994a6e0-d36b-4dab-8ae1-c1b469e4d9e2"
     ],
     "sources": [
       {
-        "source_url": "https://artificialanalysis.ai/_next/static/chunks/25897-e15b0a6a7b942c64.js",
-        "source_sha256": "603c2e47e9c630c7cebeda5c0cd969a66c9fa8b99622a88aeb13e13caf3c756a"
+        "source_url": "https://artificialanalysis.ai/_next/static/chunks/86187-75c32cb60b247bdd.js",
+        "source_sha256": "c2b53ff00eb71e6d6d49afa03ae56429c068f3118796cd7707f6e8c5e3d30ff7"
       }
     ]
   }

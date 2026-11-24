@@ -4,7 +4,9 @@
 
 Skill и один Python-скрипт строят два рейтинга: [Artificial Analysis Intelligence Index](https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index) и [Artificial Analysis Coding Agent Index](https://artificialanalysis.ai/agents/coding-agents). Режимы и версии одной компании не занимают несколько мест на графике.
 
-Данные опубликованных графиков: **16 ноября 2026**. Intelligence Index v5.0.1 — **14 разработчиков**, порог Qwen3.8-Flash-Next — **28,58 балла**, исключены Fable, Carbon и Astra. Coding Agent Index v2.1 — **12 разработчиков**. Qwen4 Max представляет Alibaba в Intelligence Index: **42,89 балла, 6-е место**. В Coding Agent Index результата Qwen4 Max пока нет; Alibaba представляет Qwen3.8 Max.
+Данные графиков получены **24 ноября 2026 года**. В Intelligence Index v5.0.1 вошли **14 разработчиков** с порогом Qwen3.8-Flash-Next **28,58 балла** и исключениями Fable, Carbon и Astra. В Coding Agent Index v2.1 вошли **12 разработчиков**.
+
+Google вышла на первое место в обоих индексах с **Gemini 4 Neon (Xhigh)**. В Intelligence Index модель набрала **61,40 балла**. В Coding Agent Index она набрала **58,64 балла** в Antigravity CLI и опередила Anthropic на **0,17 балла**. [Данные по моделям](https://artificialanalysis.ai/models) · [Данные по coding-агентам](https://artificialanalysis.ai/agents/coding-agents)
 
 ![AI Fair Rating](examples/rating.png)
 
@@ -42,6 +44,8 @@ AA хранит список моделей с пометкой «No publicly av
 Для Coding Agent Index берётся опубликованный `indexScore × 100` без округления до отбора. Принимается любой числовой балл; записи без балла исключаются. Балл вне исходной шкалы 0..1 вызывает ошибку.
 
 Модель сопоставляется с полным каталогом по разработчику и точному имени/короткому имени без учёта регистра. Релизы и режимы не подменяются; неоднозначность вызывает ошибку. Из каталога берутся доступность API (`hostModelCount > 0` и отсутствие пометки «No publicly available API»), страна, открытые веса и типы ввода. Балл Intelligence Index при этом не используется: для coding-рейтинга он может отсутствовать. После отбора выбирается одна лучшая конфигурация на разработчика, **без порога по баллам**, включая нулевые результаты. Порог Qwen3.8-Flash-Next и исключения Fable, Carbon, Astra действуют только в Intelligence Index.
+
+Если в строке указано только общее имя группы, скрипт ищет точный ID запуска в разделе [Harness Comparisons](https://artificialanalysis.ai/agents/coding-agents#harness-comparisons). Если там указан один и тот же вариант для сравнений, скрипт сверяет разработчика, релиз, точное имя и режим с каталогом. Связь сохраняется в снимке и метаданных, исходная подпись остаётся в CSV.
 
 Иконки ввода и штриховка описывают модель, а не дополнительные возможности оболочки.
 
